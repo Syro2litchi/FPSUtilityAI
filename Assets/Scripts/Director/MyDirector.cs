@@ -1,11 +1,11 @@
 using UnityEngine;
 
-namespace ZombieFPS
+namespace ZombieFPS.Director
 {
     /// <summary>
     /// Director that does nothing. Replace it with your own IAIDirector implementation.
     /// </summary>
-    public class EmptyDirector : MonoBehaviour, IAIDirector
+    public class MyDirector : MonoBehaviour, IAIDirector
     {
         public void OnGameStart(DirectorContext context, DirectorActions actions)
         {

@@ -5,6 +5,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Rendering;
+using ZombieFPS.Director;
 
 namespace ZombieFPS.Editor
 {
@@ -812,7 +813,7 @@ namespace ZombieFPS.Editor
 
             var directorGo = new GameObject("AI Director");
             var runner = directorGo.AddComponent<DirectorRunner>();
-            directorGo.AddComponent<EmptyDirector>();
+            directorGo.AddComponent<MyDirector>();
 
             var overlay = game.AddComponent<DebugOverlay>();
             overlay.runner = runner;
