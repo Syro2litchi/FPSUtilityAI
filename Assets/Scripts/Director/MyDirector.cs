@@ -47,7 +47,7 @@ namespace ZombieFPS.Director
         public void Tick(DirectorContext context, DirectorActions actions, float deltaTime)
         {
             spawnTimer = Mathf.Max(0f, spawnTimer - deltaTime);
-            Context["PlayerHealth"] = context.Player.Health;
+            Context["PlayerHealth"] = context.Player.HealthRatio;
             Context["PlayerProgress"] = context.Player.Progress;
             Context["PlayerSpeed"] = context.Player.Speed;
             Context["GameTime"] = context.GameTime;
@@ -61,50 +61,109 @@ namespace ZombieFPS.Director
             Context["TimeOutOfFight"] = Mathf.Clamp01(time / 30f);
             
             
-            var chosenAction = ChooseAction();
-            if (chosenAction.Name == "SpawnSingleEnemy" && spawnTimer <= 0f)
-            {
-                SpawnPointInfo spawnPoint = ChooseSpawnPoint(context, SpawnPointKind.Enemy);
+            SpawnPointInfo enemyPoint = ChooseSpawnPoint(
+                context, SpawnPointKind.Enemy);
 
-                if (spawnPoint != null)
+            SpawnPointInfo pickupPoint = ChooseSpawnPoint(
+                context, SpawnPointKind.Pickup);
+
+            var chosenAction = ChooseAction(enemyPoint, pickupPoint);
+
+            if (chosenAction == null)
+                return;
+
+            if (chosenAction.Name == "SpawnSingleEnemy")
+            {
+                if (actions.SpawnEnemy(EnemyType.Common, enemyPoint, false))
                 {
-                    if (actions.SpawnEnemy(EnemyType.Common, spawnPoint, false))
-                    {
-                        spawnTimer = spawnCooldown;
-                    }
+                    spawnTimer = spawnCooldown;
                 }
             }
-
-            if (chosenAction.Name == "SpawnHealthPickUp")
+            else if (chosenAction.Name == "SpawnHealthPickUp")
             {
-                SpawnPointInfo spawnPoint = ChooseSpawnPoint(context, SpawnPointKind.Pickup);
-
-                actions.SpawnPickup(PickupType.Health, spawnPoint);
+                actions.SpawnPickup(PickupType.Health, pickupPoint);
             }
             
+            // var chosenAction = ChooseAction();
+            // if (chosenAction.Name == "SpawnSingleEnemy" && spawnTimer <= 0f)
+            // {
+            //     SpawnPointInfo spawnPoint = ChooseSpawnPoint(context, SpawnPointKind.Enemy);
+            //
+            //     if (spawnPoint != null)
+            //     {
+            //         if (actions.SpawnEnemy(EnemyType.Common, spawnPoint, false))
+            //         {
+            //             spawnTimer = spawnCooldown;
+            //         }
+            //     }
+            // }
+            //
+            // if (chosenAction.Name == "SpawnHealthPickUp")
+            // {
+            //     SpawnPointInfo spawnPoint = ChooseSpawnPoint(context, SpawnPointKind.Pickup);
+            //
+            //     actions.SpawnPickup(PickupType.Health, spawnPoint);
+            // }
         }
         
         
-        private UtilityAction ChooseAction() {
-            // Selection
+        private UtilityAction ChooseAction(
+            SpawnPointInfo enemyPoint, SpawnPointInfo pickupPoint)
+        {
             UtilityAction bestAction = null;
             float bestScore = -1f;
-            foreach (UtilityAction utilityAction in _actions) {
+
+            foreach (UtilityAction utilityAction in _actions)
+            {
+                if (utilityAction.Name == "SpawnSingleEnemy")
+                {
+                    if (spawnTimer > 0f || enemyPoint == null)
+                        continue;
+                }
+
+                if (utilityAction.Name == "SpawnHealthPickUp")
+                {
+                    if (pickupPoint == null)
+                        continue;
+                }
+
                 float score = utilityAction.Evaluate(Context);
-                if (score > bestScore) {
+
+                if (score > bestScore)
+                {
                     bestScore = score;
                     bestAction = utilityAction;
                 }
             }
+
             return bestAction;
         }
         
-        private SpawnPointInfo ChooseSpawnPoint(DirectorContext context, SpawnPointKind spawnPointKind)
+        // private UtilityAction ChooseAction() {
+        //     // Selection
+        //     UtilityAction bestAction = null;
+        //     float bestScore = -1f;
+        //     foreach (UtilityAction utilityAction in _actions) {
+        //         float score = utilityAction.Evaluate(Context);
+        //         if (score > bestScore) {
+        //             bestScore = score;
+        //             bestAction = utilityAction;
+        //         }
+        //     }
+        //     return bestAction;
+        // }
+        
+        private SpawnPointInfo ChooseSpawnPoint(
+            DirectorContext context, SpawnPointKind spawnPointKind)
         {
             SpawnPointInfo bestPoint = null;
             float bestDistance = float.PositiveInfinity;
 
-            foreach (SpawnPointInfo point in context.EnemySpawnPoints)
+            var spawnPoints = spawnPointKind == SpawnPointKind.Enemy
+                ? context.EnemySpawnPoints
+                : context.PickupSpawnPoints;
+
+            foreach (SpawnPointInfo point in spawnPoints)
             {
                 if (point.Kind != spawnPointKind)
                     continue;
@@ -116,6 +175,9 @@ namespace ZombieFPS.Director
                     continue;
 
                 if (point.DistanceToPlayer < 10f)
+                    continue;
+
+                if (spawnPointKind == SpawnPointKind.Pickup && point.IsOccupied)
                     continue;
 
                 if (point.DistanceToPlayer < bestDistance)
