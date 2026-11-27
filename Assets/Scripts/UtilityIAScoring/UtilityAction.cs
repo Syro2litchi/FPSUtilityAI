@@ -16,7 +16,6 @@ public class UtilityAction {
             score += evaluation * consideration.Weight;
             weightSum += consideration.Weight;
         }
-        
         return score / weightSum;
     }
 }
